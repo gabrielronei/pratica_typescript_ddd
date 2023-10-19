@@ -74,7 +74,7 @@ describe("Product repository test", () => {
         await productRepository.create(productTwo);
 
         const products = [product, productTwo];
-        const foundProducts = productRepository.findAll();
+        const foundProducts = await productRepository.findAll();
 
         expect(products).toEqual(foundProducts);
     });
