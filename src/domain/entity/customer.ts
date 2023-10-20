@@ -26,8 +26,20 @@ export default class Customer {
         return this._name;
     }
     
-    get address(): Address {
-        return this._address;
+    get street(): string {
+        return this._address.street;
+    }
+
+    get number(): number {
+        return this._address.number;
+    }
+
+    get zip(): string {
+        return this._address.zip;
+    }
+
+    get city(): string {
+        return this._address.city;
     }
 
     get rewardPoints(): number {
