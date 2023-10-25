@@ -1,8 +1,10 @@
 import Order from "../../domain/entity/order";
+import OrderItem from "../../domain/entity/order_item";
+import OrderRepositoryInterface from "../../domain/repository/order-repository.interface";
 import OrderItemModel from "../db/sequelize/model/order-items_model";
 import OrderModel from "../db/sequelize/model/order.model";
 
-export default class OrderRepository {
+export default class OrderRepository implements OrderRepositoryInterface {
 
     async create(entity: Order): Promise<void> {
         await OrderModel.create({
@@ -23,35 +25,50 @@ export default class OrderRepository {
     }
 
 
-    // async update(entity: Customer): Promise<void> {
-    //     await CustomerModel.update({
-    //         name: entity.name,
-    //         street: entity.street,
-    //         number: entity.number,
-    //         zipcode: entity.zip,
-    //         city: entity.city,
-    //         active: entity.isActive(),
-    //         rewardPoints: entity.rewardPoints,
-    //     },
-    //         {
-    //             where: {
-    //                 id: entity.id
-    //             }
-    //         }
-    //     );
-    // }
+    async update(entity: Order): Promise<void> {
+        const sequelize = OrderModel.sequelize;
 
-    // async find(id: string): Promise<Customer> {
-    //     try {
-    //         const customer = await CustomerModel.findOne({where: {id: id}, rejectOnEmpty: true});
-    //         return new Customer(customer.id, customer.name, new Address(customer.street, customer.number, customer.zipcode, customer.city));
-    //     } catch(error) {
-    //         throw new Error("Customer not found!");
-    //     }
-    // }
+        await sequelize.transaction(async (t) => {
+            await OrderItemModel.destroy({
+                where: { order_id: entity.id },
+                transaction: t,
+            });
 
-    // async findAll(): Promise<Customer[]> {
-    //     return (await CustomerModel.findAll()).map(customer => new Customer(customer.id, customer.name, new Address(customer.street, customer.number, customer.zipcode, customer.city)));
-    // }
+            const newItems = entity.items.map((item) => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                product_id: item.productId,
+                quantity: item.quantity,
+                order_id: entity.id,
+            }));
 
+            await OrderItemModel.bulkCreate(newItems, { transaction: t });
+
+            await OrderModel.update({
+                customer_id: entity.customerId,
+                total: entity.total(),
+            },
+                {
+                    where: {
+                        id: entity.id,
+                    },
+                    transaction: t
+                }
+            )
+        })
+    }
+
+    async find(id: string): Promise<Order> {
+        try {
+            const order = await OrderModel.findOne({ where: { id: id }, include: [{ model: OrderItemModel }], rejectOnEmpty: true });
+            return new Order(order.id, order.customer_id, order.items.map(item => new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity)));
+        } catch (error) {
+            throw new Error("Order not found!");
+        }
+    }
+
+    async findAll(): Promise<Order[]> {
+        return (await OrderModel.findAll({ include: ['items'] })).map(order => new Order(order.id, order.customer_id, order.items.map(item => new OrderItem(item.id, item.name, item.price, item.product_id, item.quantity))));
+    }
 }
