@@ -1,4 +1,4 @@
-import Order from "../../domain/entity/oder";
+import Order from "../../domain/entity/order";
 import OrderItemModel from "../db/sequelize/model/order-items_model";
 import OrderModel from "../db/sequelize/model/order.model";
 
